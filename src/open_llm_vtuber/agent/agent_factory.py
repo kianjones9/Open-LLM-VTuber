@@ -120,12 +120,13 @@ class AgentFactory:
             settings = agent_settings.get("letta_agent", {})
             return LettaAgent(
                 live2d_model=live2d_model,
-                id=settings.get("id"),
+                id=settings.get("agent_id"),
                 tts_preprocessor_config=tts_preprocessor_config,
                 faster_first_response=settings.get("faster_first_response"),
                 segment_method=settings.get("segment_method"),
                 host=settings.get("host"),
                 port=settings.get("port"),
+                letta_cloud_api_key=settings.get("letta_cloud_api_key"),
             )
 
         else:

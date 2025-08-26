@@ -153,7 +153,8 @@ class LettaConfig(I18nMixin, BaseModel):
 
     host: str = Field("localhost", alias="host")
     port: int = Field(8283, alias="port")
-    id: str = Field(..., alias="id")
+    agent_id: str = Field(..., alias="agent_id")
+    letta_cloud_api_key: Optional[str] = Field(None, alias="letta_cloud_api_key")
     faster_first_response: Optional[bool] = Field(True, alias="faster_first_response")
     segment_method: Literal["regex", "pysbd"] = Field("pysbd", alias="segment_method")
 
@@ -165,9 +166,21 @@ class LettaConfig(I18nMixin, BaseModel):
             en="Port number for the Letta server (default: 8283)",
             zh="Letta服务器的端口号（默认：8283）",
         ),
-        "id": Description(
+        "agent_id": Description(
             en="Agent instance ID running on the Letta server",
             zh="指定Letta服务器上运行的Agent实例id",
+        ),
+        "letta_cloud_api_key": Description(
+            en="API key for Letta Cloud service (optional, for cloud deployment)",
+            zh="Letta Cloud 服务的 API 密钥（可选，用于云端部署）",
+        ),
+        "faster_first_response": Description(
+            en="Whether to respond as soon as encountering a comma in the first sentence to reduce latency (default: True)",
+            zh="是否在第一句回应时遇上逗号就直接生成音频以减少首句延迟（默认：True）",
+        ),
+        "segment_method": Description(
+            en="Method for segmenting sentences: 'regex' or 'pysbd' (default: 'pysbd')",
+            zh="分割句子的方法：'regex' 或 'pysbd'（默认：'pysbd'）",
         ),
     }
 

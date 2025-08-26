@@ -26,11 +26,19 @@ class LettaAgent(AgentInterface):
         segment_method: str = "pysbd",
         host: str = "localhost",
         port: int = 8283,
+        letta_cloud_api_key: str = None,
     ):
         super().__init__()
-        self.url = f"http://{host}:{port}"
-        self.client = Letta(base_url=self.url)
         self.id = id
+        
+        # Initialize Letta client based on whether cloud API key is provided
+        if letta_cloud_api_key:
+            # Use Letta Cloud with API key
+            self.client = Letta(base_url="https://api.letta.com", token=letta_cloud_api_key)
+        else:
+            # Use local Letta server
+            self.url = f"http://{host}:{port}"
+            self.client = Letta(base_url=self.url)
         # Initialize decorator parameters
         self._tts_preprocessor_config = tts_preprocessor_config
         self._live2d_model = live2d_model
@@ -63,30 +71,55 @@ class LettaAgent(AgentInterface):
 
     async def chat(self, input_data: BatchInput) -> AsyncIterator[SentenceOutput]:
         messages = self._to_messages(input_data)
-        stream = self.generator_to_async(
-            self.client.agents.messages.create_stream(
-                agent_id=self.id,
-                messages=messages,
-                stream_tokens=True,
+        
+        try:
+            # Use Letta Cloud streaming (stream_tokens=False works for content streaming)
+            stream = self.generator_to_async(
+                self.client.agents.messages.create_stream(
+                    agent_id=self.id,
+                    messages=messages,
+                    stream_tokens=False,
+                )
             )
-        )
 
-        complete_response = ""
-        async for token in stream:
-            if token.message_type == "reasoning_message":
-                # This part is reasoning information and should not be displayed
-                token = token.reasoning
-                continue
-            elif token.message_type == "assistant_message":
-                # This part is the result that needs to be displayed, it is the final result
-                # logger.info('Test message')
-                # logger.info(token)
-                token = token.content
-            else:
-                continue
-
-            yield token
-            complete_response += token
+            complete_response = ""
+            async for token in stream:
+                # Handle different token types
+                if hasattr(token, 'message_type'):
+                    # Skip metadata tokens
+                    if token.message_type in ["stop_reason", "usage_statistics", "reasoning_message"]:
+                        continue
+                    elif token.message_type == "assistant_message" and hasattr(token, 'content') and token.content:
+                        yield token.content
+                        complete_response += token.content
+                elif isinstance(token, str):
+                    # Direct string tokens from Letta streaming
+                    yield token
+                    complete_response += token
+                    
+        except Exception as e:
+            from loguru import logger
+            logger.error(f"Error in Letta streaming: {e}")
+            # Fallback to non-streaming
+            try:
+                response = self.client.agents.messages.create(
+                    agent_id=self.id,
+                    messages=messages,
+                )
+                
+                if hasattr(response, 'messages') and response.messages:
+                    for msg in response.messages:
+                        is_assistant = (
+                            (hasattr(msg, 'role') and msg.role == 'assistant') or
+                            (hasattr(msg, 'message_type') and msg.message_type == 'assistant_message')
+                        )
+                        
+                        if is_assistant and hasattr(msg, 'content') and msg.content:
+                            yield msg.content
+                            
+            except Exception as fallback_error:
+                logger.error(f"Fallback non-streaming also failed: {fallback_error}")
+                yield "I'm having trouble connecting to Letta. Please check the logs."
 
     def _to_text_prompt(self, input_data: BatchInput) -> str:
         """

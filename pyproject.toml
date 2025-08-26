@@ -46,6 +46,9 @@ bilibili = [
     "Brotli~=1.1.0",
     "yarl~=1.9.3",
 ]
+fish_audio = [
+    "fish-audio-sdk",
+]
 
 [tool.pixi.project]
 channels = ["conda-forge"]
