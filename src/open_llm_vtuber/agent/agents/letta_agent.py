@@ -27,9 +27,11 @@ class LettaAgent(AgentInterface):
         host: str = "localhost",
         port: int = 8283,
         letta_cloud_api_key: str = None,
+        token_streaming: bool = False,
     ):
         super().__init__()
         self.id = id
+        self.token_streaming = token_streaming
         
         # Initialize Letta client based on whether cloud API key is provided
         if letta_cloud_api_key:
@@ -73,12 +75,12 @@ class LettaAgent(AgentInterface):
         messages = self._to_messages(input_data)
         
         try:
-            # Use Letta Cloud streaming (stream_tokens=False works for content streaming)
+            # Use Letta Cloud streaming with configurable token streaming
             stream = self.generator_to_async(
                 self.client.agents.messages.create_stream(
                     agent_id=self.id,
                     messages=messages,
-                    stream_tokens=False,
+                    stream_tokens=self.token_streaming,
                 )
             )
 

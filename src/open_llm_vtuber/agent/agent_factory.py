@@ -127,6 +127,7 @@ class AgentFactory:
                 host=settings.get("host"),
                 port=settings.get("port"),
                 letta_cloud_api_key=settings.get("letta_cloud_api_key"),
+                token_streaming=settings.get("token_streaming", False),
             )
 
         else:
